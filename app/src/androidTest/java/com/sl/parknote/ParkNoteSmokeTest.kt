@@ -27,6 +27,46 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(rule.activity.getString(R.string.floor)).assertExists()
     }
 
+    @Test fun cancellingAnEditPreservesPreviouslySavedParking() {
+        val underground = rule.activity.getString(R.string.underground)
+        val title = rule.activity.getString(R.string.current_place)
+        rule.waitUntil(timeoutMillis = 15_000) {
+            rule.onAllNodesWithText(underground).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText(underground).performClick()
+        rule.onAllNodes(hasSetTextAction())[1].performTextInput("-2")
+        val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
+        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+        save.assertIsDisplayed()
+        save.performClick()
+        rule.waitUntil(timeoutMillis = 15_000) {
+            rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("-2").assertExists()
+
+        rule.onNodeWithText(rule.activity.getString(R.string.edit)).performClick()
+        rule.onAllNodes(hasSetTextAction())[1].performTextReplacement("-4")
+        val cancel = rule.onNodeWithText(rule.activity.getString(R.string.cancel))
+        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+        cancel.assertIsDisplayed()
+        cancel.performClick()
+        rule.waitUntil(timeoutMillis = 15_000) {
+            rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("-2").assertExists()
+        rule.onNodeWithText("-4").assertDoesNotExist()
+        rule.activityRule.scenario.recreate()
+        rule.waitUntil(timeoutMillis = 15_000) {
+            rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("-2").assertExists()
+        rule.onNodeWithText(rule.activity.getString(R.string.finish)).performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.delete)).performClick()
+        rule.waitUntil(timeoutMillis = 15_000) {
+            rule.onAllNodesWithText(underground).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test fun savedParkingCanBeEditedRecreatedAndFinished() {
         val underground = rule.activity.getString(R.string.underground)
         val title = rule.activity.getString(R.string.current_place)
