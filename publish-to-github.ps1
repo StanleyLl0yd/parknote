@@ -1,26 +1,46 @@
 #Requires -Version 7.0
 $ErrorActionPreference = 'Stop'
 $repo = 'StanleyLl0yd/parknote'
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'GitHub CLI (gh) is required.' }
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'git is required.' }
-gh auth status | Out-Host
-if ($LASTEXITCODE -ne 0) { throw 'Authenticate first: gh auth login' }
-$existing = & gh repo view $repo --json name 2>$null
-if ($LASTEXITCODE -eq 0) { throw "Repository $repo already exists. Refusing to overwrite/push automatically." }
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+foreach ($tool in @('git', 'gh')) {
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        throw "$tool is required; install it before publishing."
+    }
+}
+
+& gh auth status
+if ($LASTEXITCODE -ne 0) { throw 'GitHub authentication is required: gh auth login' }
+
 Push-Location $root
 try {
-    if (Test-Path '.git') { throw 'Git repository already present; review remote and state manually.' }
-    git init -b main
-    if ($LASTEXITCODE -ne 0) { throw 'git init failed' }
-    git add .
-    git commit -m 'feat: bootstrap ParkNote Android application'
-    if ($LASTEXITCODE -ne 0) { throw 'git commit failed; configure git user.name/user.email' }
-    gh repo create $repo --public --source . --remote origin --push --description 'Private offline Android parking spot reminder: GPS and underground parking' --disable-wiki
-    if ($LASTEXITCODE -ne 0) { throw 'GitHub repository creation or push failed' }
-    $topics = @('android','kotlin','jetpack-compose','material3','offline-first','privacy','parking','rustore')
-    gh repo edit $repo --add-topic ($topics -join ',')
-    if ($LASTEXITCODE -ne 0) { Write-Warning 'Repository created; topics must be configured manually.' }
-    gh repo view $repo --web
+    if (-not (Test-Path '.git')) {
+        throw 'Git metadata is missing. Extract the complete ParkNote developer archive (including .git); do not run git init.'
+    }
+
+    $branch = (& git branch --show-current).Trim()
+    if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') { throw 'Expected the existing main branch.' }
+
+    & git cat-file -e 'c5e15d0^{commit}'
+    if ($LASTEXITCODE -ne 0) { throw 'The original ParkNote Git history is missing. Refusing to publish.' }
+
+    $dirty = & git status --porcelain=v1
+    if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Uncommitted changes found. Review and commit locally before publishing.' }
+
+    $remote = & git remote
+    if ($LASTEXITCODE -ne 0 -or $remote) { throw 'Git remotes already configured; refusing to change or overwrite them.' }
+
+    & gh repo create $repo --public --source . --remote origin --push --description 'Offline Android utility to remember where a car is parked' --disable-wiki
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub repository creation/push failed; inspect gh output and git remote -v.' }
+
+    $localSha = (& git rev-parse HEAD).Trim()
+    $remoteInfo = & git ls-remote origin 'refs/heads/main'
+    if ($LASTEXITCODE -ne 0 -or -not $remoteInfo) { throw 'Could not verify remote main after pushing.' }
+    $remoteSha = ($remoteInfo -split '\s+')[0]
+    if ($remoteSha -ne $localSha) { throw 'Remote main does not match local main.' }
+
+    Write-Host "Verified remote main: $remoteSha"
+    Write-Host "Repository: https://github.com/$repo"
+    Write-Host 'GitHub Actions may still be running; check the Actions tab for build results.'
 }
 finally { Pop-Location }

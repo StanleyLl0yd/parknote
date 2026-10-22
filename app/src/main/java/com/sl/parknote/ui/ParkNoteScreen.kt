@@ -246,7 +246,7 @@ private fun Editor(
             Text(stringResource(R.string.remove_coords))
         }
     }
-    LocationButton(onPermissionResult = { granted ->
+    LocationButton(onError = { locationMessage = R.string.location_unavailable }, onPermissionResult = { granted ->
         if (!granted) locationMessage = R.string.location_denied
         else if (!locating) {
             locating = true
@@ -294,8 +294,16 @@ private fun PhotoPreview(file: File, onRemove: (() -> Unit)?) {
     var enlarged by remember { mutableStateOf(false) }
     val bitmap by produceState<Bitmap?>(initialValue = null, file.absolutePath) {
         value = withContext(Dispatchers.IO) {
-            if (!file.isFile) null else try { BitmapFactory.decodeFile(file.absolutePath) }
-                catch (_: OutOfMemoryError) { null }
+            if (!file.isFile) null else try {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.absolutePath, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) null else {
+                    var sample = 1
+                    while (bounds.outWidth / sample > 1024 || bounds.outHeight / sample > 1024) sample *= 2
+                    BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
+                }
+            } catch (_: OutOfMemoryError) { null }
+              catch (_: Exception) { null }
         }
     }
     if (bitmap == null) Text(stringResource(R.string.photo_unavailable)) else {

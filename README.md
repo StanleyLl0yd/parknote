@@ -11,10 +11,10 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 ## Developer setup
 
 - Android Studio supporting AGP 9.4; Android SDK Platform 37; SDK Build Tools 36.0.0.
-- Gradle 9.6 and JDK 25 to run builds (JVM target 17).
+- Gradle 9.6.0 and JDK 25 to run builds (JVM target 17).
 - `gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
 
-**Environment limitation at project inception (2026-10-22):** the workspace had no Android SDK or Gradle distribution and could not reach public artifact servers. Therefore a trustworthy Android build, UI/instrumentation tests, and wrapper JAR could not be produced here. CI installs Gradle 9.6 using `gradle/actions/setup-gradle`; local builds can use a system Gradle 9.6. Generate the standard Gradle Wrapper binary and scripts with `gradle wrapper --gradle-version 9.6 --distribution-type bin`, then commit the generated wrapper files. No debug APK/AAB is claimed as release-ready. **This repository is a development snapshot, not a publication-ready 1.0.**
+**Environment limitation at project inception (2026-10-22):** the workspace had no Android SDK or Gradle distribution and could not reach public artifact servers. Therefore a trustworthy Android build, UI/instrumentation tests, and wrapper JAR could not be produced here. CI installs Gradle 9.6 using `gradle/actions/setup-gradle`; local builds can use a system Gradle 9.6. Generate the standard Gradle Wrapper binary and scripts with `gradle wrapper --gradle-version 9.6.0 --distribution-type bin`, then commit the generated wrapper files. CI bootstraps Gradle 9.6.0 with the official setup-gradle action and generates a wrapper before invoking it. This is temporary until the official wrapper files can be committed. No debug APK/AAB is claimed as release-ready. **This repository is a development snapshot, not a publication-ready 1.0.**
 
 ## Storage integrity
 
@@ -28,5 +28,7 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 4. Crash-injection tests of atomic save and photo replacement, orphan cleanup, bad EXIF and low-disk errors.
 5. Merged manifest validation, cloud-backup/device-transfer validation, APK/AAB inspection and signature setup outside Git.
 6. Resolve remaining issue: camera URI cleanup on abnormal process death, recover uncommitted photo data securely; test with large font and accessibility services.
+
+**Publication gate:** Do not upload the app to RuStore or Google Play without explicit authorization.
 
 No license is included until explicitly chosen.
