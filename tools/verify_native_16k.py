@@ -16,7 +16,7 @@ ZIP_LOCAL_SIGNATURE = 0x04034B50
 
 
 def check_elf(data: bytes, name: str) -> int:
-    if len(data) < 64 or data[:4] != b"\\x7fELF":
+    if len(data) < 64 or data[:4] != b"\x7fELF":
         raise ValueError(f"{name}: not a valid ELF shared library")
     kind, endian_byte = data[4], data[5]
     if endian_byte not in (1, 2) or kind not in (1, 2):
