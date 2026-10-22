@@ -35,27 +35,33 @@ class PhotoStore(private val context: Context) {
             val options = BitmapFactory.Options().apply { inSampleSize = sample }
             val original = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
                 ?: error("Invalid or unsupported image")
-            val orientation = context.contentResolver.openInputStream(uri)?.use {
-                ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-            } ?: ExifInterface.ORIENTATION_NORMAL
-            val matrix = Matrix().apply {
-                when (orientation) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
-                    ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
-                    ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
-                    ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> preScale(-1f, 1f)
-                    ExifInterface.ORIENTATION_FLIP_VERTICAL -> preScale(1f, -1f)
-                    ExifInterface.ORIENTATION_TRANSPOSE -> { preScale(-1f, 1f); postRotate(270f) }
-                    ExifInterface.ORIENTATION_TRANSVERSE -> { preScale(-1f, 1f); postRotate(90f) }
+            var corrected: Bitmap? = null
+            try {
+                val orientation = context.contentResolver.openInputStream(uri)?.use {
+                    ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+                } ?: ExifInterface.ORIENTATION_NORMAL
+                val matrix = Matrix().apply {
+                    when (orientation) {
+                        ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
+                        ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+                        ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+                        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> preScale(-1f, 1f)
+                        ExifInterface.ORIENTATION_FLIP_VERTICAL -> preScale(1f, -1f)
+                        ExifInterface.ORIENTATION_TRANSPOSE -> { preScale(-1f, 1f); postRotate(270f) }
+                        ExifInterface.ORIENTATION_TRANSVERSE -> { preScale(-1f, 1f); postRotate(90f) }
+                    }
                 }
+                val bitmap = if (matrix.isIdentity()) original else
+                    Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
+                corrected = bitmap
+                FileOutputStream(part).use { stream ->
+                    check(bitmap.compress(Bitmap.CompressFormat.JPEG, 88, stream))
+                    stream.fd.sync()
+                }
+            } finally {
+                if (corrected !== original) corrected?.recycle()
+                original.recycle()
             }
-            val corrected = if (matrix.isIdentity()) original else Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
-            FileOutputStream(part).use { stream ->
-                check(corrected.compress(Bitmap.CompressFormat.JPEG, 88, stream))
-                stream.fd.sync()
-            }
-            if (corrected !== original) corrected.recycle()
-            original.recycle()
             check(part.renameTo(target)) { "Photo could not be committed" }
             id
         } catch (e: OutOfMemoryError) {
@@ -74,9 +80,19 @@ class PhotoStore(private val context: Context) {
         }
     }
 
-    suspend fun removeUnreferenced(keep: Set<String>) = withContext(Dispatchers.IO) {
+    /**
+     * Recent staged JPEGs survive restart for editor state restoration (24h by caller).
+     * Explicit cancel/save/finish uses no grace; interrupted .part writes are disposable.
+     */
+    suspend fun removeUnreferenced(keep: Set<String>, minimumAgeMillis: Long = 0) = withContext(Dispatchers.IO) {
+        require(minimumAgeMillis >= 0)
+        val cutoff = System.currentTimeMillis() - minimumAgeMillis
         dir.listFiles()?.forEach { file ->
-            if (file.name !in keep && (file.name.endsWith(".part") || file.name.endsWith(".jpg"))) file.delete()
+            if (!file.isFile || file.name in keep) return@forEach
+            val partial = file.name.endsWith(".part")
+            val orphanJpeg = file.name.endsWith(".jpg") &&
+                (minimumAgeMillis == 0L || file.lastModified() in 1..cutoff)
+            if (partial || orphanJpeg) file.delete()
         }
     }
 }

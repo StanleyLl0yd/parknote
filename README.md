@@ -18,7 +18,7 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 
 ## Storage integrity
 
-`ParkingRepository` uses `AtomicFile` for one JSON schema-1 record. New JPEGs are written into app-private storage before a record points at them; old JPEGs are only pruned after the replacement record is persisted. Photos are re-encoded with orientation correction, up to 2048 px per dimension, without source EXIF metadata. The app excludes its private records from automatic cloud/device-transfer backups and does not request INTERNET, media-library or camera permissions.
+`ParkingRepository` uses `AtomicFile` for one JSON schema-1 record. New JPEGs are written into app-private storage before a record points at them; old JPEGs are only pruned after the replacement record is persisted. Photos are re-encoded with orientation correction, up to 2048 px per dimension, without source EXIF metadata. On process recreation, recently staged private JPEGs are preserved for 24 hours for saved editor state recovery; partial writes are removed immediately, and explicit cancel/save/finish removes orphaned JPEGs. The app excludes its private records from automatic cloud/device-transfer backups and does not request INTERNET, media-library or camera permissions.
 
 ## Required acceptance before 1.0
 
@@ -27,7 +27,7 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 3. Real Android 8, 14-16 and Android 17 hardware tests for Location Button, system camera, Photo Picker, and maps; test without GMS and network.
 4. Crash-injection tests of atomic save and photo replacement, orphan cleanup, bad EXIF and low-disk errors.
 5. Merged manifest validation, cloud-backup/device-transfer validation, APK/AAB inspection and signature setup outside Git.
-6. Resolve remaining issue: camera URI cleanup on abnormal process death, recover uncommitted photo data securely; test with large font and accessibility services.
+6. Complete physical process-death testing of pending camera and picker callbacks; test large font and accessibility services.
 
 **Publication gate:** Do not upload the app to RuStore or Google Play without explicit authorization.
 

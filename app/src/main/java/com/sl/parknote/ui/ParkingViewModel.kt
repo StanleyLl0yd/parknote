@@ -33,7 +33,7 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
                 val loaded = repository.load()
                 // A damaged record must never cause unrelated photos to be wiped.
                 _parking.value = loaded
-                runCatching { photos.removeUnreferenced(loaded?.photos?.toSet() ?: emptySet()) }
+                runCatching { photos.removeUnreferenced(loaded?.photos?.toSet() ?: emptySet(), minimumAgeMillis = 24L * 60 * 60 * 1000) }
                 runCatching { photos.cleanupStaleCameraFiles() }
             } catch (_: Exception) { _problem.value = true }
             finally { _ready.value = true }
@@ -71,7 +71,28 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
         }
     }
 
-    suspend fun importPhoto(uri: Uri): String = photos.importPhoto(uri)
+    // All photo mutations share the busy state: prevent cancellation during an import.
+    suspend fun importPhoto(uri: Uri): String {
+        check(!_working.value && !_problem.value) { "Photo storage is busy" }
+        _working.value = true
+        return try { photos.importPhoto(uri) }
+        finally { _working.value = false }
+    }
+
+    fun discardDraft(done: () -> Unit) {
+        if (_working.value || _problem.value) return
+        viewModelScope.launch {
+            _working.value = true
+            try {
+                photos.removeUnreferenced(_parking.value?.photos?.toSet() ?: emptySet())
+            } catch (_: Exception) {
+                // Best-effort cleanup; saved parking data remains intact.
+            } finally {
+                _working.value = false
+                done()
+            }
+        }
+    }
     suspend fun captureLocation(): OneShotLocation.Fix? = locator.capture()
 
     companion object {
