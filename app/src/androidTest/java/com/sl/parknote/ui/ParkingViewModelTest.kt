@@ -42,6 +42,25 @@ class ParkingViewModelTest {
         folder.deleteRecursively()
     }
 
+    @Test fun finishCannotDeleteRecordDuringPendingSave() {
+        val record = ParkingRecord(note = "Keep pending save")
+        val completed = CountDownLatch(1)
+        val blockedFinish = AtomicInteger(0)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            model.save(record) { success ->
+                assertTrue(success)
+                completed.countDown()
+            }
+            model.finish { blockedFinish.incrementAndGet() }
+        }
+        assertTrue(completed.await(10, TimeUnit.SECONDS))
+        runBlocking {
+            withTimeout(10_000) { model.working.first { !it } }
+            assertEquals(record, ParkingRepository(isolated).load())
+        }
+        assertEquals(0, blockedFinish.get())
+    }
+
     @Test fun rapidDuplicateSaveDoesNotReplaceFirstCommittedRecord() {
         val first = ParkingRecord(note = "First tap")
         val second = ParkingRecord(note = "Second tap")
