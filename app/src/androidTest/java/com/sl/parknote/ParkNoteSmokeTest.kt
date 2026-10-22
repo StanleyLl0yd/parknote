@@ -1,14 +1,22 @@
 package com.sl.parknote
 
+import android.content.Context
+import android.os.Build
+import androidx.test.core.app.ApplicationProvider
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.*
 import com.sl.parknote.data.ParkingRepository
+import com.sl.parknote.photos.PhotoStore
 import kotlinx.coroutines.runBlocking
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.After
+import org.junit.Before
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +25,34 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ParkNoteSmokeTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    private var emulatorTest = false
+
+    @Before fun onlyRunDestructiveFlowsOnEmulator() {
+        val fingerprint = Build.FINGERPRINT.lowercase()
+        val model = Build.MODEL.lowercase()
+        emulatorTest = fingerprint.contains("generic") || fingerprint.contains("emulator") ||
+            model.contains("sdk_gphone") || model.contains("emulator")
+        assumeTrue("ParkNote smoke flows delete data; use an isolated emulator", emulatorTest)
+    }
+
+    // A failing UI assertion must not leave a saved record that breaks other tests.
+    @After fun clearFixtureAfterFailureOrSuccess() {
+        if (!emulatorTest) return
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        runBlocking {
+            ParkingRepository(context).clear()
+            PhotoStore(context).removeUnreferenced(emptySet())
+        }
+    }
+
+    private fun scrollUntilDisplayed(target: SemanticsNodeInteraction) {
+        for (attempt in 0 until 10) {
+            if (runCatching { target.assertIsDisplayed() }.isSuccess) return
+            rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+        }
+        target.assertIsDisplayed()
+    }
+
 
     @Test fun opensGarageEditorWithoutLocationPermission() {
         val underground = rule.activity.getString(R.string.underground)
@@ -36,8 +72,7 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(underground).performClick()
         rule.onAllNodes(hasSetTextAction())[1].performTextInput("-2")
         val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
-        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        save.assertIsDisplayed()
+        scrollUntilDisplayed(save)
         save.performClick()
         rule.waitUntil(timeoutMillis = 15_000) {
             rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
@@ -47,8 +82,7 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(rule.activity.getString(R.string.edit)).performClick()
         rule.onAllNodes(hasSetTextAction())[1].performTextReplacement("-4")
         val cancel = rule.onNodeWithText(rule.activity.getString(R.string.cancel))
-        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        cancel.assertIsDisplayed()
+        scrollUntilDisplayed(cancel)
         cancel.performClick()
         rule.waitUntil(timeoutMillis = 15_000) {
             rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
@@ -76,8 +110,7 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(underground).performClick()
         rule.onAllNodes(hasSetTextAction())[1].performTextInput("-1")
         val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
-        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        save.assertIsDisplayed()
+        scrollUntilDisplayed(save)
         save.performClick()
         rule.waitUntil(timeoutMillis = 15_000) {
             rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
@@ -89,8 +122,7 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(rule.activity.getString(R.string.edit)).performClick()
         rule.onAllNodes(hasSetTextAction())[1].performTextReplacement("-3")
         val saveEdited = rule.onNodeWithText(rule.activity.getString(R.string.save))
-        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        saveEdited.assertIsDisplayed()
+        scrollUntilDisplayed(saveEdited)
         saveEdited.performClick()
         rule.waitUntil(timeoutMillis = 15_000) {
             rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
@@ -124,8 +156,7 @@ class ParkNoteSmokeTest {
         save.assertIsEnabled()
         // On small screens the save button starts below the scroll viewport.
         // Scroll the actual form, then confirm a physical tap target is visible.
-        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        save.assertIsDisplayed()
+        scrollUntilDisplayed(save)
         save.performClick()
         try {
             rule.waitUntil(timeoutMillis = 15_000) {
