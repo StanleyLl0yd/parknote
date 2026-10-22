@@ -11,10 +11,10 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 ## Developer setup
 
 - Android Studio supporting AGP 9.4; Android SDK Platform 37; SDK Build Tools 36.0.0.
-- Gradle 9.6.0 and JDK 25 to run builds (JVM target 17).
+- Gradle 9.8.2 and JDK 25 to run builds (JVM target 17).
 - `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
 
-**Build status:** The Gradle 9.6 wrapper (including verified JAR and scripts) is now committed. GitHub Actions performs Android SDK installation, compilation, tests, and lint. A published passing workflow is required before this project is considered build-verified. Physical camera, GPS, process-death and backup verification remain mandatory before release.
+**Build status:** GitHub Actions has passed Android build, unit tests, lint and emulator instrumentation on API 26 and 35. The committed Gradle wrapper bootstrap JAR/scripts are retained from 9.6.0; the Gradle runtime distribution is pinned to 9.8.2 with its official SHA-256. Every toolchain update must pass fresh CI before merge. Physical camera, GPS, process-death and backup verification remain mandatory before release.
 
 ## Storage integrity
 
