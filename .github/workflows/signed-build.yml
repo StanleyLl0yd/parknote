@@ -2,6 +2,13 @@ name: Signed Android test build
 
 on:
   workflow_dispatch:
+  # Only a merged change to this inert request file can trigger a build.
+  # This allows the connected GitHub app to request a signed build without
+  # ever having access to signing secrets or workflow-dispatch privileges.
+  push:
+    branches: [main]
+    paths:
+      - '.github/signed-build-request.txt'
 
 permissions:
   contents: read
@@ -12,8 +19,9 @@ concurrency:
 
 jobs:
   signed-release:
-    # Never expose signing secrets on PRs, pushes or unprotected branches.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    # Never expose signing secrets on PRs or unprotected branches.
+    # A push is eligible only if the signing-request marker changed on main.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     runs-on: ubuntu-latest
     environment: release-signing
     timeout-minutes: 40
