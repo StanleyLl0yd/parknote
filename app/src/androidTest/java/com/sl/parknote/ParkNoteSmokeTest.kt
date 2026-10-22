@@ -39,6 +39,7 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText("-2").assertExists()
         val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
         save.assertIsEnabled()
+        save.performScrollTo()
         save.performClick()
         try {
             rule.waitUntil(timeoutMillis = 15_000) {
