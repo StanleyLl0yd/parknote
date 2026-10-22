@@ -1,0 +1,94 @@
+name: Signed Android test build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parknote-signed-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  signed-release:
+    # Never expose signing secrets on PRs, pushes or unprotected branches.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: release-signing
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          fi
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install 'platforms;android-37.0' 'build-tools;36.0.0'
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Restore signing keystore into runner temporary storage
+        shell: bash
+        env:
+          PARKNOTE_KEYSTORE_B64: ${{ secrets.PARKNOTE_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$PARKNOTE_KEYSTORE_B64" || { echo "Missing PARKNOTE_KEYSTORE_B64 secret" >&2; exit 1; }
+          printf '%s' "$PARKNOTE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/parknote-release.keystore"
+          test -s "$RUNNER_TEMP/parknote-release.keystore"
+      - name: Build signed release APK and AAB
+        shell: bash
+        env:
+          PARKNOTE_SIGNING_STORE_FILE: ${{ runner.temp }}/parknote-release.keystore
+          PARKNOTE_SIGNING_STORE_PASSWORD: ${{ secrets.PARKNOTE_STORE_PASSWORD }}
+          PARKNOTE_SIGNING_KEY_ALIAS: ${{ secrets.PARKNOTE_KEY_ALIAS }}
+          PARKNOTE_SIGNING_KEY_PASSWORD: ${{ secrets.PARKNOTE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$PARKNOTE_SIGNING_STORE_PASSWORD" || { echo "Missing signing store password secret" >&2; exit 1; }
+          test -n "$PARKNOTE_SIGNING_KEY_ALIAS" || { echo "Missing signing alias secret" >&2; exit 1; }
+          test -n "$PARKNOTE_SIGNING_KEY_PASSWORD" || { echo "Missing signing key password secret" >&2; exit 1; }
+          ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease :app:lintRelease :app:testDebugUnitTest
+      - name: Verify release APK and AAB signatures and alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/release/app-release.apk
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          test -s "$APK"
+          test -s "$AAB"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          jarsigner -verify "$AAB" > "$RUNNER_TEMP/parknote-jarsigner-verify.txt"
+          grep -q 'jar verified' "$RUNNER_TEMP/parknote-jarsigner-verify.txt" || {
+            echo "AAB JAR signing verification did not succeed" >&2; exit 1;
+          }
+          python3 tools/verify_native_16k.py "$APK" "$AAB"
+          sha256sum "$APK" "$AAB"
+      - name: Upload signed test artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: parknote-signed-test-${{ github.run_number }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+      - name: Erase runner keystore
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/parknote-release.keystore" ]; then
+            shred -u "$RUNNER_TEMP/parknote-release.keystore" 2>/dev/null || rm -f "$RUNNER_TEMP/parknote-release.keystore"
+          fi
