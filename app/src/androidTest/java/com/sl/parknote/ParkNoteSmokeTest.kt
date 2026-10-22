@@ -4,7 +4,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.*
+import com.sl.parknote.data.ParkingRepository
+import kotlinx.coroutines.runBlocking
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -34,9 +36,19 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText(underground).performClick()
         // The second editable field is the floor; no GPS or network is required.
         rule.onAllNodes(hasSetTextAction())[1].performTextInput("-2")
-        rule.onNodeWithText(rule.activity.getString(R.string.save)).performClick()
-        rule.waitUntil(timeoutMillis = 15_000) {
-            rule.onAllNodesWithText(savedPlace).fetchSemanticsNodes().isNotEmpty()
+        rule.onNodeWithText("-2").assertExists()
+        val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
+        save.assertIsEnabled()
+        save.performClick()
+        try {
+            rule.waitUntil(timeoutMillis = 15_000) {
+                rule.onAllNodesWithText(savedPlace).fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (failure: Throwable) {
+            val stored = runCatching {
+                runBlocking { ParkingRepository(rule.activity.applicationContext).load() }
+            }
+            throw AssertionError("Parking save timeout; persisted=$stored; semantics:\\n${rule.onRoot().printToString()}", failure)
         }
         rule.onNodeWithText("-2").assertExists()
         rule.activityRule.scenario.recreate()
