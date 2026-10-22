@@ -100,8 +100,14 @@ class PhotoStoreTest {
             assertNull("Camera make must not leak into private JPEG", getAttribute(ExifInterface.TAG_MAKE))
             assertNull("GPS must not leak into private JPEG", getAttribute(ExifInterface.TAG_GPS_LATITUDE))
             assertNull("GPS must not leak into private JPEG", getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
-            assertEquals(ExifInterface.ORIENTATION_NORMAL, getAttributeInt(
-                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL))
+            // Re-encoded JPEG has normalized pixel orientation and deliberately no EXIF.
+            // AndroidX ExifInterface reports ORIENTATION_UNDEFINED (0) for some
+            // metadata-free JPEGs; ORIENTATION_NORMAL (1) is also acceptable.
+            val orientation = getAttributeInt(
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+            assertTrue("Re-encoded photo must not retain EXIF rotation: $orientation",
+                orientation == ExifInterface.ORIENTATION_UNDEFINED ||
+                    orientation == ExifInterface.ORIENTATION_NORMAL)
         }
         // Import must not mutate the original provider-owned source file.
         assertEquals(ExifInterface.ORIENTATION_ROTATE_90, ExifInterface(input.absolutePath)
