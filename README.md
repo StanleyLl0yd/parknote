@@ -12,9 +12,9 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 
 - Android Studio supporting AGP 9.4; Android SDK Platform 37; SDK Build Tools 36.0.0.
 - Gradle 9.6.0 and JDK 25 to run builds (JVM target 17).
-- `gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`
 
-**Environment limitation at project inception (2026-10-22):** the workspace had no Android SDK or Gradle distribution and could not reach public artifact servers. Therefore a trustworthy Android build, UI/instrumentation tests, and wrapper JAR could not be produced here. CI installs Gradle 9.6 using `gradle/actions/setup-gradle`; local builds can use a system Gradle 9.6. Generate the standard Gradle Wrapper binary and scripts with `gradle wrapper --gradle-version 9.6.0 --distribution-type bin`, then commit the generated wrapper files. CI bootstraps Gradle 9.6.0 with the official setup-gradle action and generates a wrapper before invoking it. This is temporary until the official wrapper files can be committed. No debug APK/AAB is claimed as release-ready. **This repository is a development snapshot, not a publication-ready 1.0.**
+**Build status:** The Gradle 9.6 wrapper (including verified JAR and scripts) is now committed. GitHub Actions performs Android SDK installation, compilation, tests, and lint. A published passing workflow is required before this project is considered build-verified. Physical camera, GPS, process-death and backup verification remain mandatory before release.
 
 ## Storage integrity
 
