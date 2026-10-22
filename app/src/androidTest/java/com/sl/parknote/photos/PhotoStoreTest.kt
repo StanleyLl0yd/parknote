@@ -114,6 +114,14 @@ class PhotoStoreTest {
             .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL))
     }
 
+    @Test fun photoIdsCannotEscapePrivateDirectory() {
+        listOf("../outside.jpg", "../../private.jpg", "photo.jpg", "a/b.jpg", "invalid.jpg.part")
+            .forEach { invalid ->
+                assertTrue("Unexpectedly accepted photo id: $invalid",
+                    runCatching { store.path(invalid) }.isFailure)
+            }
+    }
+
     @Test fun staleCameraCacheExpiresButRecentCaptureSurvives() = runBlocking {
         val dir = File(root, "cache/captures").apply { mkdirs() }
         val stale = File(dir, "old.jpg").apply { writeText("old") }
