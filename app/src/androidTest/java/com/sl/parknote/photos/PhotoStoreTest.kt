@@ -3,6 +3,8 @@ package com.sl.parknote.photos
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,6 +71,41 @@ class PhotoStoreTest {
         assertTrue(File(root, "files/photos").listFiles().orEmpty().none {
             it.name.endsWith(".jpg") || it.name.endsWith(".part")
         })
+    }
+
+    @Test fun rotatedSourceIsUprightAndPrivateExifIsStripped() = runBlocking {
+        val input = File(root, "orientation-gps.jpg")
+        val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888)
+        try {
+            FileOutputStream(input).use {
+                assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it))
+            }
+        } finally { bitmap.recycle() }
+        ExifInterface(input.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+            setAttribute(ExifInterface.TAG_MAKE, "PRIVATE_CAMERA_MAKE")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, "N")
+            setAttribute(ExifInterface.TAG_GPS_LATITUDE, "59/1,56/1,0/1")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF, "E")
+            setAttribute(ExifInterface.TAG_GPS_LONGITUDE, "30/1,19/1,0/1")
+            saveAttributes()
+        }
+        val imported = store.path(store.importPhoto(Uri.fromFile(input)))
+        assertTrue(imported.isFile)
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(imported.absolutePath, options)
+        assertEquals(40, options.outWidth)
+        assertEquals(80, options.outHeight)
+        ExifInterface(imported.absolutePath).apply {
+            assertNull("Camera make must not leak into private JPEG", getAttribute(ExifInterface.TAG_MAKE))
+            assertNull("GPS must not leak into private JPEG", getAttribute(ExifInterface.TAG_GPS_LATITUDE))
+            assertNull("GPS must not leak into private JPEG", getAttribute(ExifInterface.TAG_GPS_LONGITUDE))
+            assertEquals(ExifInterface.ORIENTATION_NORMAL, getAttributeInt(
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL))
+        }
+        // Import must not mutate the original provider-owned source file.
+        assertEquals(ExifInterface.ORIENTATION_ROTATE_90, ExifInterface(input.absolutePath)
+            .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL))
     }
 
     @Test fun staleCameraCacheExpiresButRecentCaptureSurvives() = runBlocking {

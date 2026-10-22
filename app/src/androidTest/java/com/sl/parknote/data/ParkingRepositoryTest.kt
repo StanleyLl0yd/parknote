@@ -49,6 +49,14 @@ class ParkingRepositoryTest {
         assertEquals(original, storage.load())
     }
 
+    @Test fun interruptedAtomicWriteLeavesPreviousRecordReadable() = runBlocking {
+        val good = ParkingRecord(note = "Old committed note")
+        storage.save(good)
+        // AtomicFile writes to .new before it atomically replaces the base file.
+        File(testDir, "active_parking.json.new").writeText("partially-written invalid JSON")
+        assertEquals(good, storage.load())
+    }
+
     @Test fun damagedStorageNotMistakenForEmpty() = runBlocking {
         storage.save(ParkingRecord(note = "Saved"))
         File(testDir, "active_parking.json").writeText("not json")
