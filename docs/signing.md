@@ -5,8 +5,10 @@ to ChatGPT, GitHub issues, PRs, logs, or commit history.
 
 ## Initial setup (Windows PowerShell 7)
 
-1. Download and run the trusted local `ParkNote-Upload-SigningKey.ps1` helper, supplied separately.
-2. Select your existing `.jks`, `.keystore` or `.p12` file. Type its alias and passwords at local prompts.
+1. Download and run `ParkNote-Upload-SigningKey-v2.ps1` on your own computer.
+2. The uploader automatically finds `.jks` in `%USERPROFILE%\\Downloads`. If
+   several JKS files exist, select one by number, not by entering a path.
+   Type only the alias and password(s) at local masked prompts.
 3. The helper creates the `release-signing` environment restricted to protected branches.
 4. The helper encrypts four environment secrets using GitHub CLI (plaintext stays on your computer):
    - `PARKNOTE_KEYSTORE_B64`: in-memory Base64 representation of the binary keystore;
@@ -21,8 +23,16 @@ Secrets API after they have been set.
 
 ## Signed test build
 
-Only from `main`, manually run **Signed Android test build**:
-`gh workflow run signed-build.yml -R StanleyLl0yd/parknote --ref main`.
+Signed builds can be launched from protected `main` in either of two ways:
+- Manually: `gh workflow run signed-build.yml -R StanleyLl0yd/parknote --ref main`.
+- After the owner confirms `SIGNING_SECRETS_VERIFIED`, the maintainer creates a
+  pull request changing the inert `.github/signed-build-request.txt` marker,
+  waits for all mandatory CI checks and merges it through branch protection.
+  The resulting `main` push automatically triggers exactly one signed build.
+
+Changing application code alone does not trigger signed builds. Never add a
+keystore, password, encoded secret, certificate private key, or personal details
+to the marker file. Do not merge a signing request before confirmation.
 
 The workflow has read-only GitHub permissions, checks out only main, restores the
 keystore into runner temporary storage, signs APK/AAB, verifies both signatures,
