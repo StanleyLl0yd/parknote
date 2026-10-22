@@ -78,6 +78,14 @@ jobs:
           test -s "$APK"
           test -s "$AAB"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          # Public certificate fingerprint, pinned from the first successful
+          # 0.1.0 signed build. Prevents accidental loss of update continuity.
+          EXPECTED_SIGNER_SHA256=f02571c40741e2cb071564f5b63fd3dc38a875d0eda11a8c42269ed635bc2a58
+          ACTUAL_SIGNER_SHA256="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+          if [ "$ACTUAL_SIGNER_SHA256" != "$EXPECTED_SIGNER_SHA256" ]; then
+            echo "APK is not signed by the approved ParkNote update certificate" >&2
+            exit 1
+          fi
           jarsigner -verify "$AAB" > "$RUNNER_TEMP/parknote-jarsigner-verify.txt"
           grep -q 'jar verified' "$RUNNER_TEMP/parknote-jarsigner-verify.txt" || {
             echo "AAB JAR signing verification did not succeed" >&2; exit 1;
