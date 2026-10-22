@@ -49,7 +49,7 @@ class PhotoStore(private val context: Context) {
                     ExifInterface.ORIENTATION_TRANSVERSE -> { preScale(-1f, 1f); postRotate(90f) }
                 }
             }
-            val corrected = if (matrix.isIdentity) original else Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
+            val corrected = if (matrix.isIdentity()) original else Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
             FileOutputStream(part).use { stream ->
                 check(corrected.compress(Bitmap.CompressFormat.JPEG, 88, stream))
                 stream.fd.sync()
@@ -63,6 +63,14 @@ class PhotoStore(private val context: Context) {
             throw IllegalStateException("Image is too large to process", e)
         } catch (e: Exception) {
             part.delete(); target.delete(); throw e
+        }
+    }
+
+    suspend fun cleanupStaleCameraFiles() = withContext(Dispatchers.IO) {
+        val captures = File(context.cacheDir, "captures")
+        val oldestAllowed = System.currentTimeMillis() - 24L * 60 * 60 * 1000
+        captures.listFiles()?.forEach { file ->
+            if (file.isFile && file.lastModified() in 1 until oldestAllowed) file.delete()
         }
     }
 

@@ -65,6 +65,11 @@ class ParkingRecordTest {
         assertEquals(original.id, updated.id)
     }
 
+    @Test fun providerRequiresCoordinates() {
+        invalid { ParkingRecord(note = "X", locationProvider = "gps").validate() }
+        ParkingRecord(latitude = 58.0, longitude = 30.0, locationProvider = "gps").validate()
+    }
+
     @Test fun timestampsMonotonic() {
         invalid { ParkingRecord(note = "X", createdAt = -1).validate() }
         invalid { ParkingRecord(note = "X", createdAt = 200, updatedAt = 100).validate() }

@@ -34,6 +34,7 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
                 // A damaged record must never cause unrelated photos to be wiped.
                 _parking.value = loaded
                 runCatching { photos.removeUnreferenced(loaded?.photos?.toSet() ?: emptySet()) }
+                runCatching { photos.cleanupStaleCameraFiles() }
             } catch (_: Exception) { _problem.value = true }
             finally { _ready.value = true }
         }
