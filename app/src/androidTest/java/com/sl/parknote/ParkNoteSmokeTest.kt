@@ -84,7 +84,7 @@ class ParkNoteSmokeTest {
         }
         rule.onNodeWithText("-1").assertExists()
         val originalId = runBlocking { ParkingRepository(rule.activity.applicationContext).load()?.id }
-        assert(originalId != null)
+        org.junit.Assert.assertNotNull(originalId)
 
         rule.onNodeWithText(rule.activity.getString(R.string.edit)).performClick()
         rule.onAllNodes(hasSetTextAction())[1].performTextReplacement("-3")
@@ -97,7 +97,7 @@ class ParkNoteSmokeTest {
         }
         rule.onNodeWithText("-3").assertExists()
         val editedId = runBlocking { ParkingRepository(rule.activity.applicationContext).load()?.id }
-        assert(originalId == editedId)
+        org.junit.Assert.assertEquals(originalId, editedId)
         rule.activityRule.scenario.recreate()
         rule.waitUntil(timeoutMillis = 15_000) {
             rule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
