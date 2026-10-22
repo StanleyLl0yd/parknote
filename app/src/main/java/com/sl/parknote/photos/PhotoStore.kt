@@ -27,8 +27,10 @@ class PhotoStore(private val context: Context) {
         val part = File(dir, "$id.part")
         try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            val boundsStream = context.contentResolver.openInputStream(uri)
                 ?: error("Image cannot be opened")
+            boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+            // inJustDecodeBounds deliberately returns null; dimensions are in Options.
             require(bounds.outWidth in 1..20_000 && bounds.outHeight in 1..20_000) { "Invalid image dimensions" }
             var sample = 1
             while (bounds.outWidth / sample > 2048 || bounds.outHeight / sample > 2048) sample *= 2
