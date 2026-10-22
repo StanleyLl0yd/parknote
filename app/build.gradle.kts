@@ -42,7 +42,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
-    implementation("androidx.core:core-ktx:1.19.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     // The Android 17 Location Button has no stable artifact as of 2026-10-22.
     // Its sole alpha dependency is deliberately isolated to the permission UI.
     implementation("androidx.core.locationbutton:locationbutton-compose:1.0.0-alpha01")
