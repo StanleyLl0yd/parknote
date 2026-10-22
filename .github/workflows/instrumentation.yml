@@ -13,6 +13,10 @@ jobs:
   instrumented:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [26, 35]
     steps:
       - uses: actions/checkout@v4
       - name: Install JDK 25
@@ -40,7 +44,7 @@ jobs:
       - name: Android 15 AOSP emulator tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: ${{ matrix.api-level }}
           target: default
           arch: x86_64
           profile: pixel_5
@@ -51,7 +55,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: parknote-android-test-results
+          name: parknote-android-test-results-${{ matrix.api-level }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
