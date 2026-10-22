@@ -59,8 +59,7 @@ fun ParkNoteScreen(model: ParkingViewModel) {
     val finished = stringResource(R.string.finished)
     fun abandon() {
         if (working) return
-        mode = "home"
-        scope.launch { runCatching { model.photos.removeUnreferenced(record?.photos?.toSet() ?: emptySet()) } }
+        model.discardDraft { mode = "home" }
     }
     BackHandler(mode != "home") { abandon() }
 
@@ -173,6 +172,13 @@ private fun Editor(
     var space by rememberSaveable(initial?.id) { mutableStateOf(initial?.spaceNumber ?: "") }
     var note by rememberSaveable(initial?.id) { mutableStateOf(initial?.note ?: "") }
     var imageIds by rememberSaveable(initial?.id) { mutableStateOf(initial?.photos?.joinToString("|") ?: "") }
+    // The editor's saved Bundle can refer to photos removed after their recovery grace.
+    LaunchedEffect(initial?.id) {
+        val kept = imageIds.split('|').filter {
+            it.isNotEmpty() && runCatching { model.photos.path(it).isFile }.getOrDefault(false)
+        }.joinToString("|")
+        if (kept != imageIds) imageIds = kept
+    }
     val pictures = imageIds.split('|').filter { it.isNotEmpty() }
     var latitude by rememberSaveable(initial?.id) { mutableStateOf(initial?.latitude) }
     var longitude by rememberSaveable(initial?.id) { mutableStateOf(initial?.longitude) }
@@ -227,13 +233,19 @@ private fun Editor(
             picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }) { Text(stringResource(R.string.choose_photo)) }
         OutlinedButton(enabled = !importing && !working, onClick = {
+            var pending: File? = null
             try {
                 val dir = File(context.cacheDir, "captures").apply { mkdirs() }
                 val file = File.createTempFile("photo-", ".jpg", dir)
+                pending = file
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
                 captureUri = uri.toString()
                 camera.launch(uri)
-            } catch (_: Exception) { onError() }
+            } catch (_: Exception) {
+                pending?.delete()
+                captureUri = null
+                onError()
+            }
         }) { Text(stringResource(R.string.take_photo)) }
     }
 
