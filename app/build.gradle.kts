@@ -16,6 +16,31 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Keystore and passwords are supplied only through the manual release-signing job.
+    // CI/PR builds stay unsigned. No signing information is stored in source control.
+    val releaseSigningNames = listOf(
+        "PARKNOTE_SIGNING_STORE_FILE",
+        "PARKNOTE_SIGNING_STORE_PASSWORD",
+        "PARKNOTE_SIGNING_KEY_ALIAS",
+        "PARKNOTE_SIGNING_KEY_PASSWORD",
+    )
+    val releaseSigningEnabled = releaseSigningNames.any { !System.getenv(it).isNullOrBlank() }
+    if (releaseSigningEnabled) {
+        require(releaseSigningNames.all { !System.getenv(it).isNullOrBlank() }) {
+            "Incomplete ParkNote release signing environment"
+        }
+        signingConfigs {
+            create("environmentRelease") {
+                val storePath = checkNotNull(System.getenv("PARKNOTE_SIGNING_STORE_FILE"))
+                require(file(storePath).isFile) { "ParkNote release keystore does not exist" }
+                storeFile = file(storePath)
+                storePassword = System.getenv("PARKNOTE_SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("PARKNOTE_SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("PARKNOTE_SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -25,6 +50,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningEnabled) {
+                signingConfig = signingConfigs.getByName("environmentRelease")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
