@@ -46,10 +46,11 @@ class ParkNoteSmokeTest {
     }
 
     private fun scrollUntilDisplayed(target: SemanticsNodeInteraction) {
-        for (attempt in 0 until 10) {
-            if (runCatching { target.assertIsDisplayed() }.isSuccess) return
-            rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-        }
+        // A gesture delivered to the scroll container may be swallowed by an
+        // editor text field or its IME. Compose's semantic ScrollTo targets
+        // the actual button bounds, even after editing an existing record.
+        target.performScrollTo()
+        rule.waitForIdle()
         target.assertIsDisplayed()
     }
 
