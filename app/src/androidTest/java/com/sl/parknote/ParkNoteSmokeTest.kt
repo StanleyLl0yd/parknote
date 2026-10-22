@@ -39,7 +39,10 @@ class ParkNoteSmokeTest {
         rule.onNodeWithText("-2").assertExists()
         val save = rule.onNodeWithText(rule.activity.getString(R.string.save))
         save.assertIsEnabled()
-        save.performScrollTo()
+        // On small screens the save button starts below the scroll viewport.
+        // Scroll the actual form, then confirm a physical tap target is visible.
+        rule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+        save.assertIsDisplayed()
         save.performClick()
         try {
             rule.waitUntil(timeoutMillis = 15_000) {
