@@ -31,7 +31,7 @@ jobs:
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build, unit tests and Android lint
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:bundleRelease
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug :app:bundleRelease
       - name: Verify privacy manifest
         run: |
           if grep -REn 'android.permission.(INTERNET|ACCESS_BACKGROUND_LOCATION|READ_MEDIA_IMAGES|READ_EXTERNAL_STORAGE|CAMERA)' app/src/main/AndroidManifest.xml; then
