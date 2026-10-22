@@ -36,6 +36,7 @@ class ParkingViewModelTest {
         }
         model = ParkingViewModel(isolated)
         runBlocking { withTimeout(10_000) { model.ready.first { it } } }
+        assertFalse("Fresh isolated storage must not start damaged", model.problem.value)
     }
 
     @After fun teardown() {
