@@ -26,7 +26,7 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 2. Android emulator instrumentation and rotation/process-death scenarios, including in-progress camera capture and denied permissions.
 3. Real Android 8, 14-16 and Android 17 hardware tests for Location Button, system camera, Photo Picker, and maps; test without GMS and network.
 4. Crash-injection tests of atomic save and photo replacement, orphan cleanup, bad EXIF and low-disk errors.
-5. Merged manifest validation, cloud-backup/device-transfer validation, APK/AAB inspection and signature setup outside Git.
+5. Merged manifest validation, cloud-backup/device-transfer validation, APK/AAB inspection and signature setup outside Git. CI checks native ELF and APK 16 KB alignment; physical 16 KB device install remains necessary.
 6. Complete physical process-death testing of pending camera and picker callbacks; test large font and accessibility services.
 
 **Publication gate:** Do not upload the app to RuStore or Google Play without explicit authorization.

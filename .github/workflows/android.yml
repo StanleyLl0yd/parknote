@@ -32,6 +32,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: Build, unit tests and Android lint
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug :app:bundleRelease
+      - name: Verify native ELF and APK 16 KB alignment
+        run: python3 tools/verify_native_16k.py app/build/outputs/apk/debug/app-debug.apk app/build/outputs/bundle/release/app-release.aab
       - name: Verify privacy manifest
         run: |
           if grep -REn 'android.permission.(INTERNET|ACCESS_BACKGROUND_LOCATION|READ_MEDIA_IMAGES|READ_EXTERNAL_STORAGE|CAMERA)' app/src/main/AndroidManifest.xml; then
