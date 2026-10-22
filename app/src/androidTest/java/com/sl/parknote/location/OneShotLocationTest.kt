@@ -43,6 +43,17 @@ class OneShotLocationTest {
         assertNull(OneShotLocation.validFix(candidate(longitude = Double.POSITIVE_INFINITY), now))
     }
 
+    @Test fun unusuallyLongProviderNameCannotBreakPersistedRecord() {
+        val location = Location("p".repeat(101)).apply {
+            time = now
+            latitude = 59.94
+            longitude = 30.32
+        }
+        val result = OneShotLocation.validFix(location, now)
+        assertNotNull(result)
+        assertNull(result!!.provider)
+    }
+
     @Test fun unusableAccuracyDoesNotCorruptValidCoordinates() {
         assertNull(OneShotLocation.validFix(null, now))
         assertNull(OneShotLocation.validFix(candidate(ageMillis = now + 1), now))
