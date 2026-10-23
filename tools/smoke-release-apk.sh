@@ -4,7 +4,15 @@
 set -euo pipefail
 : "${ANDROID_HOME:?ANDROID_HOME is required}"
 : "${RUNNER_TEMP:?RUNNER_TEMP is required}"
-APK="app/build/outputs/apk/release/app-release.apk"
+# Unsigned AGP release builds are named app-release-unsigned.apk; an
+# environment-signed release uses app-release.apk. Require exactly one.
+shopt -s nullglob
+RELEASE_APKS=(app/build/outputs/apk/release/*.apk)
+if (( ${#RELEASE_APKS[@]} != 1 )); then
+  printf 'Expected one unsigned release APK, found %s\\n' "${#RELEASE_APKS[@]}" >&2
+  exit 1
+fi
+APK="${RELEASE_APKS[0]}"
 SIGNED="$RUNNER_TEMP/parknote-ci-release-signed.apk"
 KEY="$RUNNER_TEMP/parknote-ci-smoke.jks"
 SIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
