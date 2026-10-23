@@ -93,7 +93,7 @@ jobs:
           # Independently verify AAB certificate identity, not just JAR signature
           # validity. Suppress certificate-owner details from public CI logs.
           AAB_SIGNER_SHA256="$(keytool -printcert -jarfile "$AAB" \
-            | sed -n -E 's/^[[:space:]]*SHA256:[[:space:]]*([A-Fa-f0-9:]+)[[:space:]]*$/\\1/p' \
+            | sed -n -E 's/^[[:space:]]*SHA256:[[:space:]]*([A-Fa-f0-9:]+)[[:space:]]*$/\1/p' \
             | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           if [ "$AAB_SIGNER_SHA256" != "$EXPECTED_SIGNER_SHA256" ]; then
             echo "AAB is not signed by the approved ParkNote certificate" >&2
