@@ -41,9 +41,10 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
     }
 
     fun save(record: ParkingRecord, done: (Boolean) -> Unit) {
-        if (_working.value || _problem.value) return
+        if (!_ready.value || _working.value || _problem.value) return
+        // Reserve before scheduling: two rapid taps must not queue two writes.
+        _working.value = true
         viewModelScope.launch {
-            _working.value = true
             try {
                 record.validate()
                 require(record.photos.all { photos.path(it).isFile })
@@ -58,9 +59,9 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
     }
 
     fun finish(done: (Boolean) -> Unit) {
-        if (_working.value || _problem.value) return
+        if (!_ready.value || _working.value || _problem.value) return
+        _working.value = true
         viewModelScope.launch {
-            _working.value = true
             try {
                 repository.clear()
                 _parking.value = null
@@ -73,16 +74,16 @@ class ParkingViewModel(private val context: Context) : ViewModel() {
 
     // All photo mutations share the busy state: prevent cancellation during an import.
     suspend fun importPhoto(uri: Uri): String {
-        check(!_working.value && !_problem.value) { "Photo storage is busy" }
+        check(_ready.value && !_working.value && !_problem.value) { "Photo storage is busy" }
         _working.value = true
         return try { photos.importPhoto(uri) }
         finally { _working.value = false }
     }
 
     fun discardDraft(done: () -> Unit) {
-        if (_working.value || _problem.value) return
+        if (!_ready.value || _working.value || _problem.value) return
+        _working.value = true
         viewModelScope.launch {
-            _working.value = true
             try {
                 photos.removeUnreferenced(_parking.value?.photos?.toSet() ?: emptySet())
             } catch (_: Exception) {
