@@ -1,6 +1,9 @@
 ParkNote signed device-test build request
-Date: 2026-10-22
-Authorization: repository owner confirmed four release-signing environment secret names uploaded.
-Purpose: generate signed release APK and AAB for private device testing.
-Store/publish: no distribution or store release authorized.
-Key material: never in this file or repository.
+Date: 2026-10-23
+Version: 0.9.0-beta.1
+VersionCode: 2
+Authorization: owner previously confirmed release-signing environment secrets.
+Source: protected main only after required PR checks.
+Purpose: create a signed APK and AAB for private beta device testing.
+Store/publish: no RuStore or Google Play publication authorized.
+Key material: no secrets or keystore included.
