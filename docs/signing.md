@@ -17,6 +17,18 @@ to ChatGPT, GitHub issues, PRs, logs, or commit history.
    - `PARKNOTE_KEY_PASSWORD`: key password.
 5. Keep an offline backup of the original keystore **and** your alias/passwords.
 
+### Approved public signing certificate
+
+The first successful signed ParkNote 0.1.0 test APK established this certificate
+SHA-256 fingerprint (public verification data, **not** a secret):
+
+`f02571c40741e2cb071564f5b63fd3dc38a875d0eda11a8c42269ed635bc2a58`
+
+The signed-build workflow rejects any APK signed by a different certificate.
+This preserves update compatibility when installing beta builds over an existing
+installation. Never replace the private JKS without an explicit signing-key
+rotation/migration plan.
+
 The GitHub CLI encrypts secrets before uploading. Base64 is merely a transport
 encoding, not encryption. Secret values cannot be retrieved through the GitHub
 Secrets API after they have been set.

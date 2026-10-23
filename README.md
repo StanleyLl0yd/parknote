@@ -31,6 +31,8 @@ ParkNote remembers where you parked - even underground. Android 8+ (minSdk 26).
 
 **Signing:** An opt-in manual signed test build uses environment-protected GitHub Actions secrets, with no keystore or password stored in Git. See [docs/signing.md](docs/signing.md).
 
+**Private beta:** The 0.9.0-beta.1 candidate increments Android versionCode to 2 and will be signed with the existing environment-protected app key. See [CHANGELOG.md](CHANGELOG.md) for scope and deferred device-only acceptance. Do not treat emulator CI as physical-camera or OEM validation.
+
 **Publication gate:** Do not upload the app to RuStore or Google Play without explicit authorization.
 
 No license is included until explicitly chosen.
