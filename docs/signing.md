@@ -24,7 +24,8 @@ SHA-256 fingerprint (public verification data, **not** a secret):
 
 `f02571c40741e2cb071564f5b63fd3dc38a875d0eda11a8c42269ed635bc2a58`
 
-The signed-build workflow rejects any APK signed by a different certificate.
+The signed-build workflow rejects APKs and AABs signed by a different
+certificate; certificate-owner details are not deliberately printed to CI logs.
 This preserves update compatibility when installing beta builds over an existing
 installation. Never replace the private JKS without an explicit signing-key
 rotation/migration plan.

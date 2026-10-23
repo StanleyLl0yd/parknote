@@ -77,7 +77,7 @@ jobs:
           AAB=app/build/outputs/bundle/release/app-release.aab
           test -s "$APK"
           test -s "$AAB"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
           # Public certificate fingerprint, pinned from the first successful
           # 0.1.0 signed build. Prevents accidental loss of update continuity.
           EXPECTED_SIGNER_SHA256=f02571c40741e2cb071564f5b63fd3dc38a875d0eda11a8c42269ed635bc2a58
@@ -90,6 +90,15 @@ jobs:
           grep -q 'jar verified' "$RUNNER_TEMP/parknote-jarsigner-verify.txt" || {
             echo "AAB JAR signing verification did not succeed" >&2; exit 1;
           }
+          # Independently verify AAB certificate identity, not just JAR signature
+          # validity. Suppress certificate-owner details from public CI logs.
+          AAB_SIGNER_SHA256="$(keytool -printcert -jarfile "$AAB" \
+            | sed -n -E 's/^[[:space:]]*SHA256:[[:space:]]*([A-Fa-f0-9:]+)[[:space:]]*$/\\1/p' \
+            | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [ "$AAB_SIGNER_SHA256" != "$EXPECTED_SIGNER_SHA256" ]; then
+            echo "AAB is not signed by the approved ParkNote certificate" >&2
+            exit 1
+          fi
           python3 tools/verify_native_16k.py "$APK" "$AAB"
           sha256sum "$APK" "$AAB"
       - name: Upload signed test artifacts
