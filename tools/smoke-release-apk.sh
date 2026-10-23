@@ -30,7 +30,6 @@ keytool -genkeypair -noprompt -keystore "$KEY" -storetype PKCS12 \
 "$SIGNER" verify "$SIGNED"
 adb uninstall com.sl.parknote >/dev/null 2>&1 || true
 # Clearing logcat is best-effort: API 26 emulator may deny this operation.
-adb logcat -c >/dev/null 2>&1 || true
 adb install "$SIGNED"
 adb shell am start -W -n com.sl.parknote/.MainActivity
 sleep 3
