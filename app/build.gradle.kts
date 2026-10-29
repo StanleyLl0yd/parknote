@@ -75,7 +75,7 @@ dependencies {
     // Its sole alpha dependency is deliberately isolated to the permission UI.
     implementation("androidx.core.locationbutton:locationbutton-compose:1.0.0-alpha01")
     implementation("androidx.exifinterface:exifinterface:1.4.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
